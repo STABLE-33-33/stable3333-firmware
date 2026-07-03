@@ -4,8 +4,8 @@
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Ajout de la fonctionnalité de mise à jour.",
+  "releaseNotes": "Mise à jour binar-safe",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-03T21:14:01.854Z"
+  "requestedAt": "2026-07-03T22:00:19.593Z"
 }
