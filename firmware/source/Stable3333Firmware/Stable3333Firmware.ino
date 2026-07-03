@@ -1468,13 +1468,14 @@ class StableOtaControlCallbacks: public BLECharacteristicCallbacks {
 
 class StableOtaDataCallbacks: public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *characteristic) override {
-    String value = characteristic->getValue();
+    uint8_t *data = characteristic->getData();
+    size_t length = characteristic->getLength();
 
-    if (value.length() == 0) {
+    if (data == nullptr || length == 0) {
       return;
     }
 
-    handleOtaData(reinterpret_cast<uint8_t *>(value.begin()), value.length());
+    handleOtaData(data, length);
   }
 };
 
