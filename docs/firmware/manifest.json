@@ -12,7 +12,7 @@
       "firmwareURL": "https://github.com/STABLE-33-33/stable3333-firmware/releases/download/firmware-beta-1.0.4-ble/stable3333-beta-1.0.4-ble.bin",
       "sha256": "70531844b950d63e1bb01e4dc885b422e96d1b3fa5bfab84fdb7403aa634b1ae",
       "size": 714352,
-      "releaseNotes": "Version de test",
+      "releaseNotes": "Version de test avec mention 'TEST2'",
       "publishedAt": "2026-07-03T23:36:07.614Z",
       "mandatory": true
     },
