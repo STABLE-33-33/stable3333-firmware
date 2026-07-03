@@ -1,7 +1,11 @@
 {
   "channel": "beta",
-  "version": "0.1.0",
-  "hardware": ["all"],
-  "releaseNotes": "Version initiale du système de mise à jour sans fil.",
-  "mandatory": false
+  "version": "1.0.1-ble",
+  "hardware": [
+    "all"
+  ],
+  "releaseNotes": "Ajout de la fonctionnalité de mise à jour.",
+  "mandatory": true,
+  "publishedBy": "PICJ01.Admin",
+  "requestedAt": "2026-07-03T21:14:01.854Z"
 }
