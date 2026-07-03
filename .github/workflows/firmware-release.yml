@@ -62,7 +62,10 @@ jobs:
           VERSION="${{ inputs.version }}"
           TAG="firmware-${CHANNEL}-${VERSION}"
           ASSET="stable3333-${CHANNEL}-${VERSION}.bin"
-          BIN="$(find build/firmware -name '*.bin' -print -quit)"
+          BIN="$(find build/firmware -name '*.ino.bin' -print -quit)"
+          if [ -z "$BIN" ]; then
+            BIN="$(find build/firmware -name '*.bin' ! -name '*bootloader*' ! -name '*partitions*' ! -name '*merged*' -print -quit)"
+          fi
           test -n "$BIN"
           cp "$BIN" "$ASSET"
           SHA="$(sha256sum "$ASSET" | awk '{print $1}')"
