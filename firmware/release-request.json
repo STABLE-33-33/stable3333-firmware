@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.3-ble",
+  "version": "1.0.3-bleRev1",
   "hardware": [
     "all"
   ],
   "releaseNotes": "Version de test",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-03T23:13:35.499Z"
+  "requestedAt": "2026-07-03T23:29:25.385Z"
 }
