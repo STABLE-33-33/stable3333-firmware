@@ -167,6 +167,20 @@ String buildDeviceID() {
   return String(buffer);
 }
 
+String loadOrCreateDeviceID() {
+  String storedID = memory.getString("deviceID", "");
+  storedID.trim();
+
+  if (storedID.length() >= 8) {
+    return storedID;
+  }
+
+  String generatedID = buildDeviceID();
+  memory.putString("deviceID", generatedID);
+  logLine("Identifiant unique cree: " + generatedID);
+  return generatedID;
+}
+
 String shortDeviceSuffix() {
   if (deviceID.length() <= 6) {
     return deviceID;
@@ -1601,9 +1615,6 @@ void setup() {
   pinMode(sleepPin, INPUT_PULLDOWN);
   pinMode(sensorPin, INPUT_PULLUP);
 
-  deviceID = buildDeviceID();
-  deviceName = "Stable 33.33-" + shortDeviceSuffix();
-
   setupDisplay();
 
   ESP32PWM::allocateTimer(0);
@@ -1614,6 +1625,8 @@ void setup() {
   myservo.setPeriodHertz(50);
 
   loadConfig();
+  deviceID = loadOrCreateDeviceID();
+  deviceName = "Stable 33.33-" + shortDeviceSuffix();
   applyDisplayContrast();
   lastActivityAt = millis();
   setupBLE();
