@@ -117,7 +117,7 @@
     }
 
     .auth-card {
-      max-width: 520px;
+      max-width: 560px;
       margin-top: 72px;
     }
 
@@ -136,9 +136,13 @@
 <body>
   <main id="auth-app" class="auth-card">
     <h1>Accès administrateur</h1>
-    <p>Connecte-toi pour publier une mise à jour firmware Stable 33.33.</p>
+    <p>Connecte-toi pour publier une mise à jour firmware Stable 33.33. Le token GitHub reste protégé côté serveur.</p>
 
     <form id="auth-form">
+      <label>
+        Adresse API admin
+        <input id="api-base" autocomplete="url" placeholder="https://stable3333-firmware-admin.votre-compte.workers.dev" required>
+      </label>
       <label>
         Nom d'utilisateur
         <input id="admin-user" autocomplete="username" required>
@@ -148,7 +152,7 @@
         <input id="admin-password" type="password" autocomplete="current-password" required>
       </label>
       <button id="login" type="submit">Se connecter</button>
-      <p id="auth-error" class="error hidden">Identifiants invalides.</p>
+      <p id="auth-error" class="error hidden">Connexion impossible.</p>
     </form>
   </main>
 
@@ -156,7 +160,7 @@
     <div class="top-bar">
       <div>
         <h1>Firmware Stable 33.33</h1>
-        <p>Importe un fichier <code>.ino</code>, choisis le canal, puis publie. GitHub Actions compilera le firmware, créera une Release et mettra à jour le catalogue utilisé par l'application iOS.</p>
+        <p>Importe un fichier <code>.ino</code>, choisis le canal, puis publie. Le backend compile, crée une Release et met à jour le catalogue utilisé par l'application iOS.</p>
       </div>
       <button id="logout" class="secondary-button" type="button">Déconnexion</button>
     </div>
@@ -172,11 +176,6 @@
           <input id="repo" value="stable3333-firmware" required>
         </label>
       </div>
-
-      <label>
-        Token GitHub finement limité
-        <input id="token" type="password" autocomplete="off" placeholder="github_pat_..." required>
-      </label>
 
       <div class="grid">
         <label>
@@ -235,128 +234,59 @@
     const form = document.querySelector("#release-form");
     const log = document.querySelector("#log");
     const publish = document.querySelector("#publish");
-    const sessionKey = "stable3333-admin-authenticated";
+    const sessionKey = "stable3333-admin-session";
+    const configKey = "stable3333-admin";
 
-    const admins = [
-      {
-        user: "PICS01.Admin",
-        salt: "qK2k6gvPmP+rUv69tWRNQw==",
-        hash: "5YTAg0lXqQMAAuy7OvwIM2NcZLhnngjzS2N0b/2rC5c=",
-        iterations: 250000
-      },
-      {
-        user: "PICJ01.Admin",
-        salt: "RjP0AeHNm2RXuliefrUcbw==",
-        hash: "f9j5q3+p40RIKtjuwOBfNGmoyEreN9KJMJLXltulUOk=",
-        iterations: 250000
-      }
-    ];
+    const saved = JSON.parse(localStorage.getItem(configKey) || "{}");
+    for (const key of ["apiBase", "owner", "repo", "branch"]) {
+      const element = document.querySelector(`#${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}`);
+      if (element && saved[key]) element.value = saved[key];
+    }
 
-    function setAuthenticated(isAuthenticated) {
+    function normalizedApiBase() {
+      return document.querySelector("#api-base").value.trim().replace(/\/+$/, "");
+    }
+
+    function currentSession() {
+      const token = sessionStorage.getItem(sessionKey);
+      return token ? { token } : undefined;
+    }
+
+    function setAuthenticated(token) {
+      const isAuthenticated = Boolean(token);
       authApp.classList.toggle("hidden", isAuthenticated);
       adminApp.classList.toggle("hidden", !isAuthenticated);
-      if (isAuthenticated) {
-        sessionStorage.setItem(sessionKey, "true");
+      if (token) {
+        sessionStorage.setItem(sessionKey, token);
       } else {
         sessionStorage.removeItem(sessionKey);
       }
-    }
-
-    function bytesFromBase64(value) {
-      return Uint8Array.from(atob(value), character => character.charCodeAt(0));
-    }
-
-    function fixedTimeEqual(left, right) {
-      if (left.length !== right.length) return false;
-      let difference = 0;
-      for (let index = 0; index < left.length; index += 1) {
-        difference |= left[index] ^ right[index];
-      }
-      return difference === 0;
-    }
-
-    async function derivePasswordHash(password, salt, iterations) {
-      const encodedPassword = new TextEncoder().encode(password);
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encodedPassword,
-        "PBKDF2",
-        false,
-        ["deriveBits"]
-      );
-      const bits = await crypto.subtle.deriveBits(
-        { name: "PBKDF2", salt: bytesFromBase64(salt), iterations, hash: "SHA-256" },
-        key,
-        256
-      );
-      return new Uint8Array(bits);
-    }
-
-    async function validateAdmin(username, password) {
-      const admin = admins.find(candidate => candidate.user === username);
-      if (!admin) return false;
-      const derived = await derivePasswordHash(password, admin.salt, admin.iterations);
-      return fixedTimeEqual(derived, bytesFromBase64(admin.hash));
-    }
-
-    if (sessionStorage.getItem(sessionKey) === "true") {
-      setAuthenticated(true);
-    }
-
-    const saved = JSON.parse(localStorage.getItem("stable3333-admin") || "{}");
-    for (const key of ["owner", "repo", "branch"]) {
-      if (saved[key]) document.querySelector(`#${key}`).value = saved[key];
     }
 
     function writeLog(message) {
       log.textContent = message;
     }
 
-    function toBase64(text) {
-      const bytes = new TextEncoder().encode(text);
-      let binary = "";
-      for (const byte of bytes) binary += String.fromCharCode(byte);
-      return btoa(binary);
-    }
-
-    async function github(method, path, token, body) {
-      const response = await fetch(`https://api.github.com${path}`, {
-        method,
+    async function api(path, options = {}) {
+      const response = await fetch(`${normalizedApiBase()}${path}`, {
+        ...options,
         headers: {
-          "Accept": "application/vnd.github+json",
-          "Authorization": `Bearer ${token}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json"
-        },
-        body: body ? JSON.stringify(body) : undefined
+          "Content-Type": "application/json",
+          ...(options.token ? { "Authorization": `Bearer ${options.token}` } : {}),
+          ...(options.headers || {})
+        }
       });
 
+      const text = await response.text();
+      const payload = text ? JSON.parse(text) : {};
       if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`${method} ${path} -> ${response.status}\n${text}`);
+        throw new Error(payload.error || `Erreur ${response.status}`);
       }
-
-      if (response.status === 204) return {};
-      return response.json();
+      return payload;
     }
 
-    async function currentSha(owner, repo, path, branch, token) {
-      try {
-        const file = await github("GET", `/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}?ref=${encodeURIComponent(branch)}`, token);
-        return file.sha;
-      } catch {
-        return undefined;
-      }
-    }
-
-    async function putFile(owner, repo, branch, token, path, content, message) {
-      const sha = await currentSha(owner, repo, path, branch, token);
-      return github("PUT", `/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}`, token, {
-        branch,
-        message,
-        content: toBase64(content),
-        sha
-      });
+    if (currentSession()) {
+      setAuthenticated(currentSession().token);
     }
 
     authForm.addEventListener("submit", async event => {
@@ -367,21 +297,30 @@
       loginButton.disabled = true;
 
       try {
+        const apiBase = normalizedApiBase();
         const username = document.querySelector("#admin-user").value.trim();
         const password = document.querySelector("#admin-password").value;
-        if (await validateAdmin(username, password)) {
-          document.querySelector("#admin-password").value = "";
-          setAuthenticated(true);
-        } else {
-          authError.classList.remove("hidden");
-        }
+        const result = await api("/login", {
+          method: "POST",
+          body: JSON.stringify({ username, password })
+        });
+
+        localStorage.setItem(configKey, JSON.stringify({
+          ...saved,
+          apiBase
+        }));
+        document.querySelector("#admin-password").value = "";
+        setAuthenticated(result.token);
+      } catch (error) {
+        authError.textContent = error.message || "Connexion impossible.";
+        authError.classList.remove("hidden");
       } finally {
         loginButton.disabled = false;
       }
     });
 
     logout.addEventListener("click", () => {
-      setAuthenticated(false);
+      setAuthenticated(undefined);
     });
 
     form.addEventListener("submit", async event => {
@@ -389,9 +328,11 @@
       publish.disabled = true;
 
       try {
+        const session = currentSession();
+        if (!session) throw new Error("Session expirée.");
+
         const owner = document.querySelector("#owner").value.trim();
         const repo = document.querySelector("#repo").value.trim();
-        const token = document.querySelector("#token").value.trim();
         const branch = document.querySelector("#branch").value.trim();
         const channel = document.querySelector("#channel").value;
         const version = document.querySelector("#version").value.trim();
@@ -403,28 +344,35 @@
         if (!file) throw new Error("Aucun fichier .ino sélectionné.");
         const ino = await file.text();
 
-        localStorage.setItem("stable3333-admin", JSON.stringify({ owner, repo, branch }));
+        localStorage.setItem(configKey, JSON.stringify({
+          apiBase: normalizedApiBase(),
+          owner,
+          repo,
+          branch
+        }));
 
-        writeLog("Envoi du firmware vers GitHub...");
-        await putFile(owner, repo, branch, token, "firmware/source/Stable3333Firmware/Stable3333Firmware.ino", ino, `Firmware ${channel} ${version}`);
-
-        writeLog("Envoi des métadonnées...");
-        await putFile(owner, repo, branch, token, "firmware/release-request.json", JSON.stringify({
-          channel,
-          version,
-          hardware,
-          releaseNotes,
-          mandatory
-        }, null, 2) + "\n", `Préparer release firmware ${channel} ${version}`);
-
-        writeLog("Déclenchement de GitHub Actions...");
-        await github("POST", `/repos/${owner}/${repo}/actions/workflows/firmware-release.yml/dispatches`, token, {
-          ref: branch,
-          inputs: { channel, version }
+        writeLog("Envoi sécurisé vers le backend...");
+        const result = await api("/publish", {
+          method: "POST",
+          token: session.token,
+          body: JSON.stringify({
+            owner,
+            repo,
+            branch,
+            channel,
+            version,
+            hardware,
+            releaseNotes,
+            mandatory,
+            ino
+          })
         });
 
-        writeLog(`Version ${version} envoyée. Ouvre l'onglet Actions du dépôt GitHub pour suivre la compilation et la publication.`);
+        writeLog(`Version ${version} envoyée. Suivi: ${result.actionsURL}`);
       } catch (error) {
+        if (/session|autorisation|token/i.test(error.message || "")) {
+          setAuthenticated(undefined);
+        }
         writeLog(error.message || String(error));
       } finally {
         publish.disabled = false;
