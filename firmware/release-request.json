@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.1-ble",
+  "version": "1.0.2-ble",
   "hardware": [
     "all"
   ],
   "releaseNotes": "Mise à jour binar-safe",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-03T22:00:19.593Z"
+  "requestedAt": "2026-07-03T22:04:05.195Z"
 }
