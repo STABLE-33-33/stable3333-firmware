@@ -51,9 +51,12 @@ jobs:
           test "$(jq -r '.version' firmware/release-request.json)" = "${{ inputs.version }}"
 
       - name: Compiler le firmware
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
           rm -rf build/firmware
           mkdir -p build/firmware
+          perl -0pi -e 's/static const char \\*FIRMWARE_VERSION = "[^"]+";/static const char *FIRMWARE_VERSION = "$ENV{VERSION}";/' firmware/source/Stable3333Firmware/Stable3333Firmware.ino
           arduino-cli compile \
             --fqbn esp32:esp32:esp32c3 \
             --build-path build/firmware \

@@ -36,6 +36,8 @@ static const char *CHAR_OTA_CONTROL_UUID =
 static const char *CHAR_OTA_DATA_UUID =
   "7a7c4b3a-6d2c-4e1f-9f3b-333300000011";
 
+static const char *FIRMWARE_VERSION = "1.0.0-ble";
+
 // MARK: - Servo Settings
 
 int upPosition = 180;
@@ -245,7 +247,9 @@ String deviceInfoPayload() {
   payload += deviceID;
   payload += "\",\"name\":\"";
   payload += deviceName;
-  payload += "\",\"firmware\":\"1.0.0-ble\",";
+  payload += "\",\"firmware\":\"";
+  payload += FIRMWARE_VERSION;
+  payload += "\",";
   payload += "\"service\":\"";
   payload += SERVICE_UUID;
   payload += "\"}";
@@ -638,7 +642,8 @@ void drawSettingsPage() {
     drawSettingRow(0, "SKU", "SPJP-5018");
     drawSettingRow(1, "ID", deviceID.substring(0, 8));
     display.setCursor(2, 41);
-    display.print(F("FW 1.0.0-ble"));
+    display.print(F("FW "));
+    display.print(FIRMWARE_VERSION);
   } else {
     display.setTextSize(1);
     display.setCursor(0, 20);
