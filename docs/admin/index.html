@@ -140,10 +140,6 @@
 
     <form id="auth-form">
       <label>
-        Adresse API admin
-        <input id="api-base" autocomplete="url" placeholder="https://stable3333-firmware-admin.votre-compte.workers.dev" required>
-      </label>
-      <label>
         Nom d'utilisateur
         <input id="admin-user" autocomplete="username" required>
       </label>
@@ -236,15 +232,16 @@
     const publish = document.querySelector("#publish");
     const sessionKey = "stable3333-admin-session";
     const configKey = "stable3333-admin";
+    const ADMIN_API_BASE = "https://stable3333-firmware-admin.stable3333-firmware-admin.workers.dev";
 
     const saved = JSON.parse(localStorage.getItem(configKey) || "{}");
-    for (const key of ["apiBase", "owner", "repo", "branch"]) {
+    for (const key of ["owner", "repo", "branch"]) {
       const element = document.querySelector(`#${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}`);
       if (element && saved[key]) element.value = saved[key];
     }
 
     function normalizedApiBase() {
-      return document.querySelector("#api-base").value.trim().replace(/\/+$/, "");
+      return ADMIN_API_BASE;
     }
 
     function currentSession() {
@@ -297,7 +294,6 @@
       loginButton.disabled = true;
 
       try {
-        const apiBase = normalizedApiBase();
         const username = document.querySelector("#admin-user").value.trim();
         const password = document.querySelector("#admin-password").value;
         const result = await api("/login", {
@@ -306,8 +302,7 @@
         });
 
         localStorage.setItem(configKey, JSON.stringify({
-          ...saved,
-          apiBase
+          ...saved
         }));
         document.querySelector("#admin-password").value = "";
         setAuthenticated(result.token);
@@ -345,7 +340,6 @@
         const ino = await file.text();
 
         localStorage.setItem(configKey, JSON.stringify({
-          apiBase: normalizedApiBase(),
           owner,
           repo,
           branch
