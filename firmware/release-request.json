@@ -1,0 +1,7 @@
+{
+  "channel": "beta",
+  "version": "0.1.0",
+  "hardware": ["all"],
+  "releaseNotes": "Version initiale du système de mise à jour sans fil.",
+  "mandatory": false
+}

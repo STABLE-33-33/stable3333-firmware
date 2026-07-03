@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stable 33.33 - Administration firmware</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: Canvas;
+      color: CanvasText;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+    }
+
+    main {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(30px, 5vw, 48px);
+      letter-spacing: 0;
+    }
+
+    p {
+      color: color-mix(in srgb, CanvasText 72%, transparent);
+      line-height: 1.5;
+    }
+
+    form, section {
+      margin-top: 24px;
+      padding: 20px;
+      border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+      border-radius: 8px;
+      background: color-mix(in srgb, Canvas 92%, CanvasText 4%);
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+      font-weight: 650;
+    }
+
+    input, select, textarea, button {
+      font: inherit;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
+      background: Canvas;
+      color: CanvasText;
+    }
+
+    textarea {
+      min-height: 104px;
+      resize: vertical;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 13px 16px;
+      background: #0a84ff;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: progress;
+    }
+
+    code {
+      word-break: break-word;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      padding: 14px;
+      border-radius: 6px;
+      background: color-mix(in srgb, CanvasText 8%, transparent);
+      min-height: 40px;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 18px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Firmware Stable 33.33</h1>
+    <p>Importe un fichier <code>.ino</code>, choisis le canal, puis publie. GitHub Actions compilera le firmware, créera une Release et mettra à jour le catalogue utilisé par l'application iOS.</p>
+
+    <form id="release-form">
+      <div class="grid">
+        <label>
+          Propriétaire GitHub
+          <input id="owner" autocomplete="organization" placeholder="jj-p1114studioinc" required>
+        </label>
+        <label>
+          Dépôt
+          <input id="repo" placeholder="stable3333-firmware" required>
+        </label>
+      </div>
+
+      <label>
+        Token GitHub finement limité
+        <input id="token" type="password" autocomplete="off" placeholder="github_pat_..." required>
+      </label>
+
+      <div class="grid">
+        <label>
+          Branche
+          <input id="branch" value="main" required>
+        </label>
+        <label>
+          Canal
+          <select id="channel">
+            <option value="beta">Bêta</option>
+            <option value="final">Final</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid">
+        <label>
+          Version
+          <input id="version" placeholder="1.0.1" required>
+        </label>
+        <label>
+          Matériel ciblé
+          <input id="hardware" value="all" required>
+        </label>
+      </div>
+
+      <label>
+        Notes de version
+        <textarea id="releaseNotes" placeholder="Correction de stabilité, minuterie plus précise..." required></textarea>
+      </label>
+
+      <label>
+        Fichier .ino
+        <input id="firmware" type="file" accept=".ino,text/plain" required>
+      </label>
+
+      <label>
+        <span><input id="mandatory" type="checkbox"> Mise à jour obligatoire</span>
+      </label>
+
+      <button id="publish" type="submit">Propulser la version</button>
+    </form>
+
+    <section>
+      <h2>Résultat</h2>
+      <pre id="log">En attente.</pre>
+    </section>
+  </main>
+
+  <script>
+    const form = document.querySelector("#release-form");
+    const log = document.querySelector("#log");
+    const publish = document.querySelector("#publish");
+
+    const saved = JSON.parse(localStorage.getItem("stable3333-admin") || "{}");
+    for (const key of ["owner", "repo", "branch"]) {
+      if (saved[key]) document.querySelector(`#${key}`).value = saved[key];
+    }
+
+    function writeLog(message) {
+      log.textContent = message;
+    }
+
+    function toBase64(text) {
+      const bytes = new TextEncoder().encode(text);
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return btoa(binary);
+    }
+
+    async function github(method, path, token, body) {
+      const response = await fetch(`https://api.github.com${path}`, {
+        method,
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json"
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`${method} ${path} -> ${response.status}\n${text}`);
+      }
+
+      if (response.status === 204) return {};
+      return response.json();
+    }
+
+    async function currentSha(owner, repo, path, branch, token) {
+      try {
+        const file = await github("GET", `/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}?ref=${encodeURIComponent(branch)}`, token);
+        return file.sha;
+      } catch {
+        return undefined;
+      }
+    }
+
+    async function putFile(owner, repo, branch, token, path, content, message) {
+      const sha = await currentSha(owner, repo, path, branch, token);
+      return github("PUT", `/repos/${owner}/${repo}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}`, token, {
+        branch,
+        message,
+        content: toBase64(content),
+        sha
+      });
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      publish.disabled = true;
+
+      try {
+        const owner = document.querySelector("#owner").value.trim();
+        const repo = document.querySelector("#repo").value.trim();
+        const token = document.querySelector("#token").value.trim();
+        const branch = document.querySelector("#branch").value.trim();
+        const channel = document.querySelector("#channel").value;
+        const version = document.querySelector("#version").value.trim();
+        const hardware = document.querySelector("#hardware").value.split(",").map(value => value.trim()).filter(Boolean);
+        const releaseNotes = document.querySelector("#releaseNotes").value.trim();
+        const mandatory = document.querySelector("#mandatory").checked;
+        const file = document.querySelector("#firmware").files[0];
+
+        if (!file) throw new Error("Aucun fichier .ino sélectionné.");
+        const ino = await file.text();
+
+        localStorage.setItem("stable3333-admin", JSON.stringify({ owner, repo, branch }));
+
+        writeLog("Envoi du firmware vers GitHub...");
+        await putFile(owner, repo, branch, token, "firmware/source/Stable3333Firmware/Stable3333Firmware.ino", ino, `Firmware ${channel} ${version}`);
+
+        writeLog("Envoi des métadonnées...");
+        await putFile(owner, repo, branch, token, "firmware/release-request.json", JSON.stringify({
+          channel,
+          version,
+          hardware,
+          releaseNotes,
+          mandatory
+        }, null, 2) + "\n", `Préparer release firmware ${channel} ${version}`);
+
+        writeLog("Déclenchement de GitHub Actions...");
+        await github("POST", `/repos/${owner}/${repo}/actions/workflows/firmware-release.yml/dispatches`, token, {
+          ref: branch,
+          inputs: { channel, version }
+        });
+
+        writeLog(`Version ${version} envoyée. Ouvre l'onglet Actions du dépôt GitHub pour suivre la compilation et la publication.`);
+      } catch (error) {
+        writeLog(error.message || String(error));
+      } finally {
+        publish.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
