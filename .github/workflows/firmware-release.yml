@@ -1,0 +1,144 @@
+name: Publier un firmware ESP32
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Canal de publication
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - final
+      version:
+        description: Version du firmware
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installer Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Installer la plateforme ESP32 et les bibliothèques
+        run: |
+          arduino-cli config init
+          arduino-cli config set board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "ESP32Servo"
+          arduino-cli lib install "Adafruit GFX Library"
+          arduino-cli lib install "Adafruit SSD1306"
+
+      - name: Valider les métadonnées
+        run: |
+          test -f firmware/release-request.json
+          test "$(jq -r '.channel' firmware/release-request.json)" = "${{ inputs.channel }}"
+          test "$(jq -r '.version' firmware/release-request.json)" = "${{ inputs.version }}"
+
+      - name: Compiler le firmware
+        run: |
+          rm -rf build/firmware
+          mkdir -p build/firmware
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32c3 \
+            --build-path build/firmware \
+            firmware/source/Stable3333Firmware
+
+      - name: Préparer l'asset
+        id: asset
+        run: |
+          CHANNEL="${{ inputs.channel }}"
+          VERSION="${{ inputs.version }}"
+          TAG="firmware-${CHANNEL}-${VERSION}"
+          ASSET="stable3333-${CHANNEL}-${VERSION}.bin"
+          BIN="$(find build/firmware -name '*.bin' -print -quit)"
+          test -n "$BIN"
+          cp "$BIN" "$ASSET"
+          SHA="$(sha256sum "$ASSET" | awk '{print $1}')"
+          SIZE="$(wc -c < "$ASSET" | tr -d ' ')"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Publier dans GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.asset.outputs.tag }}
+          ASSET: ${{ steps.asset.outputs.asset }}
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          jq -r '.releaseNotes' firmware/release-request.json > /tmp/release-notes.txt
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Firmware ${CHANNEL} ${VERSION}" --notes-file /tmp/release-notes.txt
+          else
+            if [ "$CHANNEL" = "beta" ]; then
+              gh release create "$TAG" --title "Firmware ${CHANNEL} ${VERSION}" --notes-file /tmp/release-notes.txt --prerelease
+            else
+              gh release create "$TAG" --title "Firmware ${CHANNEL} ${VERSION}" --notes-file /tmp/release-notes.txt
+            fi
+          fi
+          gh release upload "$TAG" "$ASSET" --clobber
+
+      - name: Mettre à jour le manifest public
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          VERSION: ${{ inputs.version }}
+          TAG: ${{ steps.asset.outputs.tag }}
+          ASSET: ${{ steps.asset.outputs.asset }}
+          SHA256: ${{ steps.asset.outputs.sha }}
+          SIZE: ${{ steps.asset.outputs.size }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const manifestPath = "docs/firmware/manifest.json";
+          const request = JSON.parse(fs.readFileSync("firmware/release-request.json", "utf8"));
+          const manifest = fs.existsSync(manifestPath)
+            ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
+            : { schema: 1, product: "Stable 33.33 Smart Platine", releases: [] };
+
+          const release = {
+            channel: process.env.CHANNEL,
+            version: process.env.VERSION,
+            hardware: Array.isArray(request.hardware) && request.hardware.length ? request.hardware : ["all"],
+            firmwareURL: `https://github.com/${process.env.REPOSITORY}/releases/download/${process.env.TAG}/${process.env.ASSET}`,
+            sha256: process.env.SHA256,
+            size: Number(process.env.SIZE),
+            releaseNotes: request.releaseNotes || "",
+            publishedAt: new Date().toISOString(),
+            mandatory: Boolean(request.mandatory)
+          };
+
+          manifest.schema = 1;
+          manifest.product = "Stable 33.33 Smart Platine";
+          manifest.generatedAt = new Date().toISOString();
+          manifest.releases = [
+            release,
+            ...(manifest.releases || []).filter(item => !(item.channel === release.channel && item.version === release.version))
+          ];
+
+          fs.mkdirSync("docs/firmware", { recursive: true });
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+          NODE
+
+      - name: Commit du manifest
+        run: |
+          git config user.name "Stable 33.33 Firmware Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/firmware/manifest.json
+          git commit -m "Publier manifest firmware ${{ inputs.channel }} ${{ inputs.version }}" || exit 0
+          git push
