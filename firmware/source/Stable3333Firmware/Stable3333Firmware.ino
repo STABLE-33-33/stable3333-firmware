@@ -704,7 +704,7 @@ void drawMainPage(const char *timeText) {
     display.print(textTimerActive());
   } else {
     if (showSkuOnMain) {
-      printCentered("SPJP-5018", 54);
+      printCentered("SPJP-5018 TEST", 54);
     }
   }
 }
