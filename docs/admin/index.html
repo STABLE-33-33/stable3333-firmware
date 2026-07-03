@@ -100,26 +100,76 @@
       min-height: 40px;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .secondary-button {
+      background: color-mix(in srgb, CanvasText 12%, transparent);
+      color: CanvasText;
+    }
+
+    .auth-card {
+      max-width: 520px;
+      margin-top: 72px;
+    }
+
+    .error {
+      color: #ff453a;
+      font-weight: 650;
+    }
+
     @media (max-width: 720px) {
       body { padding: 18px; }
       .grid { grid-template-columns: 1fr; }
+      .top-bar { display: grid; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Firmware Stable 33.33</h1>
-    <p>Importe un fichier <code>.ino</code>, choisis le canal, puis publie. GitHub Actions compilera le firmware, créera une Release et mettra à jour le catalogue utilisé par l'application iOS.</p>
+  <main id="auth-app" class="auth-card">
+    <h1>Accès administrateur</h1>
+    <p>Connecte-toi pour publier une mise à jour firmware Stable 33.33.</p>
+
+    <form id="auth-form">
+      <label>
+        Nom d'utilisateur
+        <input id="admin-user" autocomplete="username" required>
+      </label>
+      <label>
+        Mot de passe
+        <input id="admin-password" type="password" autocomplete="current-password" required>
+      </label>
+      <button id="login" type="submit">Se connecter</button>
+      <p id="auth-error" class="error hidden">Identifiants invalides.</p>
+    </form>
+  </main>
+
+  <main id="admin-app" class="hidden">
+    <div class="top-bar">
+      <div>
+        <h1>Firmware Stable 33.33</h1>
+        <p>Importe un fichier <code>.ino</code>, choisis le canal, puis publie. GitHub Actions compilera le firmware, créera une Release et mettra à jour le catalogue utilisé par l'application iOS.</p>
+      </div>
+      <button id="logout" class="secondary-button" type="button">Déconnexion</button>
+    </div>
 
     <form id="release-form">
       <div class="grid">
         <label>
           Propriétaire GitHub
-          <input id="owner" autocomplete="organization" placeholder="jj-p1114studioinc" required>
+          <input id="owner" autocomplete="organization" value="STABLE-33-33" required>
         </label>
         <label>
           Dépôt
-          <input id="repo" placeholder="stable3333-firmware" required>
+          <input id="repo" value="stable3333-firmware" required>
         </label>
       </div>
 
@@ -177,9 +227,81 @@
   </main>
 
   <script>
+    const authApp = document.querySelector("#auth-app");
+    const adminApp = document.querySelector("#admin-app");
+    const authForm = document.querySelector("#auth-form");
+    const authError = document.querySelector("#auth-error");
+    const logout = document.querySelector("#logout");
     const form = document.querySelector("#release-form");
     const log = document.querySelector("#log");
     const publish = document.querySelector("#publish");
+    const sessionKey = "stable3333-admin-authenticated";
+
+    const admins = [
+      {
+        user: "PICS01.Admin",
+        salt: "qK2k6gvPmP+rUv69tWRNQw==",
+        hash: "5YTAg0lXqQMAAuy7OvwIM2NcZLhnngjzS2N0b/2rC5c=",
+        iterations: 250000
+      },
+      {
+        user: "PICJ01.Admin",
+        salt: "RjP0AeHNm2RXuliefrUcbw==",
+        hash: "f9j5q3+p40RIKtjuwOBfNGmoyEreN9KJMJLXltulUOk=",
+        iterations: 250000
+      }
+    ];
+
+    function setAuthenticated(isAuthenticated) {
+      authApp.classList.toggle("hidden", isAuthenticated);
+      adminApp.classList.toggle("hidden", !isAuthenticated);
+      if (isAuthenticated) {
+        sessionStorage.setItem(sessionKey, "true");
+      } else {
+        sessionStorage.removeItem(sessionKey);
+      }
+    }
+
+    function bytesFromBase64(value) {
+      return Uint8Array.from(atob(value), character => character.charCodeAt(0));
+    }
+
+    function fixedTimeEqual(left, right) {
+      if (left.length !== right.length) return false;
+      let difference = 0;
+      for (let index = 0; index < left.length; index += 1) {
+        difference |= left[index] ^ right[index];
+      }
+      return difference === 0;
+    }
+
+    async function derivePasswordHash(password, salt, iterations) {
+      const encodedPassword = new TextEncoder().encode(password);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encodedPassword,
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+      );
+      const bits = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt: bytesFromBase64(salt), iterations, hash: "SHA-256" },
+        key,
+        256
+      );
+      return new Uint8Array(bits);
+    }
+
+    async function validateAdmin(username, password) {
+      const admin = admins.find(candidate => candidate.user === username);
+      if (!admin) return false;
+      const derived = await derivePasswordHash(password, admin.salt, admin.iterations);
+      return fixedTimeEqual(derived, bytesFromBase64(admin.hash));
+    }
+
+    if (sessionStorage.getItem(sessionKey) === "true") {
+      setAuthenticated(true);
+    }
 
     const saved = JSON.parse(localStorage.getItem("stable3333-admin") || "{}");
     for (const key of ["owner", "repo", "branch"]) {
@@ -236,6 +358,31 @@
         sha
       });
     }
+
+    authForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      authError.classList.add("hidden");
+
+      const loginButton = document.querySelector("#login");
+      loginButton.disabled = true;
+
+      try {
+        const username = document.querySelector("#admin-user").value.trim();
+        const password = document.querySelector("#admin-password").value;
+        if (await validateAdmin(username, password)) {
+          document.querySelector("#admin-password").value = "";
+          setAuthenticated(true);
+        } else {
+          authError.classList.remove("hidden");
+        }
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
+
+    logout.addEventListener("click", () => {
+      setAuthenticated(false);
+    });
 
     form.addEventListener("submit", async event => {
       event.preventDefault();
