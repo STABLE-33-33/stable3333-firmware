@@ -55,12 +55,15 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           rm -rf build/firmware
+          rm -rf build/source
           mkdir -p build/firmware
-          perl -0pi -e 's/static const char \*FIRMWARE_VERSION = "[^"]+";/static const char *FIRMWARE_VERSION = "$ENV{VERSION}";/' firmware/source/Stable3333Firmware/Stable3333Firmware.ino
+          mkdir -p build/source
+          cp -R firmware/source/Stable3333Firmware build/source/
+          perl -0pi -e 's/static const char \*FIRMWARE_VERSION = "[^"]+";/static const char *FIRMWARE_VERSION = "$ENV{VERSION}";/' build/source/Stable3333Firmware/Stable3333Firmware.ino
           arduino-cli compile \
             --fqbn esp32:esp32:esp32c3 \
             --build-path build/firmware \
-            firmware/source/Stable3333Firmware
+            build/source/Stable3333Firmware
 
       - name: Préparer l'asset
         id: asset
