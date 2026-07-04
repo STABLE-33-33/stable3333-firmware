@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.6-ble",
+  "version": "1.0.7-ble",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Mise à jour de test (Retrait mention \"TEST2\")",
+  "releaseNotes": "Mise à jour de test",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-04T00:27:53.948Z"
+  "requestedAt": "2026-07-04T02:00:16.218Z"
 }
