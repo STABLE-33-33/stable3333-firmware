@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.5-ble",
+  "version": "1.0.6-ble",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Corriger version firmware et identifiant unique",
+  "releaseNotes": "Mise à jour de test (Retrait mention \"TEST2\")",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-04T00:06:03.845Z"
+  "requestedAt": "2026-07-04T00:27:53.948Z"
 }
