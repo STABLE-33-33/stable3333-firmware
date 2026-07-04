@@ -36,7 +36,7 @@ static const char *CHAR_OTA_CONTROL_UUID =
 static const char *CHAR_OTA_DATA_UUID =
   "7a7c4b3a-6d2c-4e1f-9f3b-333300000011";
 
-static const char *FIRMWARE_VERSION = "1.0.6-ble";
+static const char *FIRMWARE_VERSION = "1.0.7-ble";
 
 // MARK: - Servo Settings
 
