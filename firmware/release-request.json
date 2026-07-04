@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.7-bleREV1",
+  "version": "1.0.7-bleREV2",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Mise à jour de test avec ajout de mention \"TEST3\" sur l'écran d'accueil du module intégré.",
+  "releaseNotes": "Mise à jour de test avec ajout de mention \"TEST4\" sur l'écran d'accueil du module intégré.",
   "mandatory": true,
   "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-04T15:29:36.630Z"
+  "requestedAt": "2026-07-04T15:51:46.047Z"
 }
