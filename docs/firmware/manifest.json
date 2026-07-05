@@ -1,8 +1,21 @@
 {
   "schema": 1,
   "product": "Stable 33.33 Smart Platine",
-  "generatedAt": "2026-07-04T15:53:43.331Z",
+  "generatedAt": "2026-07-05T03:51:16.342Z",
   "releases": [
+    {
+      "channel": "beta",
+      "version": "1.0.7-bleREV3",
+      "hardware": [
+        "all"
+      ],
+      "firmwareURL": "https://github.com/STABLE-33-33/stable3333-firmware/releases/download/firmware-beta-1.0.7-bleREV3/stable3333-beta-1.0.7-bleREV3.bin",
+      "sha256": "291a476063344a91350b6829d084a01d84c8421ed0ce8b1a78e86f22ab6cc422",
+      "size": 714736,
+      "releaseNotes": "REV 3 de la version 1.0.7-ble (1.0.7-bleREV3).\n\nAucun changement dans le firmware.",
+      "publishedAt": "2026-07-05T03:51:16.335Z",
+      "mandatory": true
+    },
     {
       "channel": "beta",
       "version": "1.0.7-bleREV2",
