@@ -1,11 +1,11 @@
 {
   "channel": "beta",
-  "version": "1.0.7-bleREV3",
+  "version": "1.0.7-bleREV4",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "REV 3 de la version 1.0.7-ble (1.0.7-bleREV3).\n\nAucun changement dans le firmware.",
+  "releaseNotes": "Première version publiée avec le nouveau système de déploiement.",
   "mandatory": true,
-  "publishedBy": "PICJ01.Admin",
-  "requestedAt": "2026-07-05T03:49:09.406Z"
+  "publishedBy": "worker",
+  "requestedAt": "2026-09-21T00:31:10.602Z"
 }
