@@ -1,11 +1,11 @@
 {
-  "channel": "beta",
-  "version": "1.0.7-bleREV4",
+  "channel": "final",
+  "version": "1.1.0",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Première version publiée avec le nouveau système de déploiement.",
+  "releaseNotes": "Voici la première version stable du logiciel interne du STABLE 33.33 SPJP-5018",
   "mandatory": true,
   "publishedBy": "worker",
-  "requestedAt": "2026-09-21T00:31:10.602Z"
+  "requestedAt": "2026-10-20T15:05:07.307Z"
 }
