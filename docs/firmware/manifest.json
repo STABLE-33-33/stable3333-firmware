@@ -1,8 +1,21 @@
 {
   "schema": 1,
   "product": "Stable 33.33 Smart Platine",
-  "generatedAt": "2026-09-21T00:33:13.461Z",
+  "generatedAt": "2026-10-20T15:07:25.463Z",
   "releases": [
+    {
+      "channel": "final",
+      "version": "1.1.0",
+      "hardware": [
+        "all"
+      ],
+      "firmwareURL": "https://github.com/STABLE-33-33/stable3333-firmware/releases/download/firmware-final-1.1.0/stable3333-final-1.1.0.bin",
+      "sha256": "111e528cc96bad98f55f17a582ce2270a5cbe380063cc668973aabde33ec88b4",
+      "size": 734656,
+      "releaseNotes": "Voici la première version stable du logiciel interne du STABLE 33.33 SPJP-5018",
+      "publishedAt": "2026-10-20T15:07:25.458Z",
+      "mandatory": true
+    },
     {
       "channel": "beta",
       "version": "1.0.7-bleREV4",
