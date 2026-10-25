@@ -1,8 +1,21 @@
 {
   "schema": 1,
   "product": "Stable 33.33 Smart Platine",
-  "generatedAt": "2026-10-20T15:07:25.463Z",
+  "generatedAt": "2026-10-25T01:02:21.716Z",
   "releases": [
+    {
+      "channel": "final",
+      "version": "1.1.1",
+      "hardware": [
+        "all"
+      ],
+      "firmwareURL": "https://github.com/STABLE-33-33/stable3333-firmware/releases/download/firmware-final-1.1.1/stable3333-final-1.1.1.bin",
+      "sha256": "22580718b242dc0226cf9e5635409f70c5535b8154273771c64620302bc49b29",
+      "size": 734640,
+      "releaseNotes": "Retrait de la mention \"TEST3\" sur l'écran d'accueil.",
+      "publishedAt": "2026-10-25T01:02:21.709Z",
+      "mandatory": false
+    },
     {
       "channel": "final",
       "version": "1.1.0",
