@@ -9,6 +9,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <Update.h>
+#include <esp_system.h>
 
 // MARK: - Stable 33.33 BLE Protocol
 
@@ -36,7 +37,7 @@ static const char *CHAR_OTA_CONTROL_UUID =
 static const char *CHAR_OTA_DATA_UUID =
   "7a7c4b3a-6d2c-4e1f-9f3b-333300000011";
 
-static const char *FIRMWARE_VERSION = "1.1.1";
+static const char *FIRMWARE_VERSION = "1.1.2";
 
 // MARK: - Servo Settings
 
@@ -167,19 +168,40 @@ String buildDeviceID() {
   return String(buffer);
 }
 
+
+String generateDeviceID() {
+  const char charset[] =
+      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const int charsetLength = sizeof(charset) - 1;
+
+  String id;
+  id.reserve(12);
+
+  for (int i = 0; i < 12; i++) {
+    uint32_t value = esp_random();
+    id += charset[value % charsetLength];
+  }
+
+  return id;
+}
+
 String loadOrCreateDeviceID() {
   String storedID = memory.getString("deviceID", "");
   storedID.trim();
 
-  if (storedID.length() >= 8) {
+  if (storedID.length() == 12) {
     return storedID;
   }
 
-  String generatedID = buildDeviceID();
+  String generatedID = generateDeviceID();
+
   memory.putString("deviceID", generatedID);
-  logLine("Identifiant unique cree: " + generatedID);
+
+  logLine("Identifiant unique cree : " + generatedID);
+
   return generatedID;
 }
+
 
 String shortDeviceSuffix() {
   if (deviceID.length() <= 6) {
