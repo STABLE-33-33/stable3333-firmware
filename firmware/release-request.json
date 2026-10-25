@@ -1,11 +1,11 @@
 {
   "channel": "final",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "hardware": [
     "all"
   ],
-  "releaseNotes": "Voici la première version stable du logiciel interne du STABLE 33.33 SPJP-5018",
-  "mandatory": true,
+  "releaseNotes": "Retrait de la mention \"TEST3\" sur l'écran d'accueil.",
+  "mandatory": false,
   "publishedBy": "worker",
-  "requestedAt": "2026-10-20T15:05:07.307Z"
+  "requestedAt": "2026-10-25T01:00:15.463Z"
 }
